@@ -5,11 +5,11 @@ Priority: optional
 Section: admin
 Maintainer: DavidTX2000 <davidtx2000ofc@gmail.com>
 Filename: aether-sync.deb
-Size: 1832
-MD5sum: 6cf46385b5620300de6f436f34126b64
-SHA1: 2b4afb5fb72099e805943ab4ae5a5c9326ad21f6
-SHA256: f6aeab2f8e6874d92dfdafd65e7cc9b1de6bcf8ef318dfb3dc39325cb6817a6d
-SHA512: 720a783159b96d404781925fa2001187f3d14d78fbadf48bcdc28873de6a1715768886f2817c66f4fe4175db4bb33bf4fe23b94e9ee6cf6b7321c44d6f08841b
+Size: 2060
+MD5sum: e3b551343de75cae5b410a9086559785
+SHA1: b5c0c3f272077dba600de5df47fa9d94a77794d6
+SHA256: 90080c99107f3b325cc631ef6affd0496c3b68bff6100c84cb8a8ae6701cbc0f
+SHA512: 6fb5eacfa151add3b94ff5c95c29496eff127ac23ed2566738cc9df6e910bbb820deef01dfbcb4f171141d5da6c1950c16f27aa022053eddac5960cd2ec91347
 Description: AETHER-SYNC MASTER. Professional system virtualization.
  Follows Termux packaging policies. Zero-dependency engineering.
 

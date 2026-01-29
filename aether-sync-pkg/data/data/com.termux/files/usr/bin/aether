@@ -1,46 +1,75 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# AETHER-SYNC v5.2.0 - Deep Mirror (DavidTX2000)
+# AETHER-SYNC v5.3.0 - Global Edition (DavidTX2000)
 
 SHADOW="/data/data/com.termux/files/usr/share/aether/shadow"
 BLUE="\033[1;34m"
 CYAN="\033[1;36m"
+RED="\033[1;31m"
+GREEN="\033[1;32m"
+YELLOW="\033[1;33m"
 RESET="\033[0m"
 
-morph() {
-    echo -e "${BLUE}[AETHER]${RESET} Iniciando Clonagem Profunda..."
+systems_status() {
+    echo -e "${BLUE}[AETHER SYSTEM REPORT]${RESET}"
+    echo -e "-------------------------------"
+    [ "$(id -u)" -eq 0 ] && REAL="${RED}Rooted (Real)${RESET}" || REAL="${GREEN}Normal (Non-Root)${RESET}"
+    echo -e "Official System: $REAL"
+    
+    if [[ "$PWD" == *"$SHADOW"* ]]; then
+        echo -e "Aether-Sync: ${CYAN}Emulated Root (Active)${RESET}"
+    else
+        echo -e "Aether-Sync: ${YELLOW}Standby (Inactive)${RESET}"
+    fi
+    echo -e "-------------------------------"
+}
 
-    # Lista completa baseada nas suas screenshots
+morph() {
+    echo -e "${BLUE}[AETHER]${RESET} Starting Deep Mirroring (Rootless)..."
+    
+    # Paths from your ZArchiver screenshots
     PATHS=("/acct" "/apex" "/bin" "/cache" "/config" "/data" "/dev" "/etc" "/mnt" "/odm" "/oem" "/proc" "/product" "/sdcard" "/storage" "/sys" "/system" "/system_ext" "/vendor")
 
     for p in "${PATHS[@]}"; do
         if [ -d "$p" ]; then
-            echo -e "${CYAN}[CLONANDO]${RESET} $p..."
+            echo -e "${CYAN}[MIRRORING]${RESET} $p"
             mkdir -p "$SHADOW$p"
-            # -as cria a árvore de pastas e links para os arquivos (economiza 3GB)
+            # Link-based cloning to save your 3GB storage
             cp -as "$p"/. "$SHADOW$p/" 2>/dev/null
         fi
     done
 
-    # Configuração do ambiente enclausurado
+    # Set up the Classic UI Environment
     cat <<OP > "$SHADOW/.bashrc"
 shopt -s nullglob
 export PS1='~#aether\${PWD#$SHADOW}\$: '
-# Interceptador que obriga o sistema a olhar para as pastas clonadas
+# System Path Interceptor
 alias cd='_cd(){ if [[ "\$1" == /* ]]; then builtin cd "$SHADOW\$1" 2>/dev/null || builtin cd "\$1"; else builtin cd "\$1"; fi; }; _cd'
 alias ls='ls --color=auto -F'
 alias aether='/data/data/com.termux/files/usr/bin/aether'
-# Oculta rastros do Termux
+# Stealth Mode: Hide Termux traces
 unset TERMUX_VERSION
 export PREFIX="/system"
+echo -e "${GREEN}Aether Shadow Environment Active.${RESET}"
 OP
 
+    echo -e "${BLUE}[AETHER]${RESET} Bypass Mode Active. Environment Ready."
     cd "$SHADOW"
     exec bash --rcfile "$SHADOW/.bashrc" -i
 }
 
 case "$1" in
     --morph) morph ;;
-    --systems) [[ "$2" == "-status" ]] && echo "Official: Non-Root | Aether: Emulated Root" ;;
-    --kill) rm -rf "$SHADOW"/* && echo "Shadow Cleaned." ;;
-    *) echo "Usage: aether [--morph|--systems -status|--kill]" ;;
+    --systems)
+        if [[ "$2" == "-status" ]]; then systems_status; else echo "Usage: aether --systems -status"; fi
+        ;;
+    --stats)
+        SIZE=$(du -sh "$SHADOW" 2>/dev/null | awk '{print $1}')
+        echo -e "${BLUE}[AETHER]${RESET} Shadow Size: ${SIZE:-0}"
+        ;;
+    --kill)
+        rm -rf "$SHADOW"/* && echo "Shadow Environment Terminated."
+        ;;
+    *)
+        echo "Usage: aether [--morph|--systems -status|--stats|--kill]"
+        ;;
 esac
