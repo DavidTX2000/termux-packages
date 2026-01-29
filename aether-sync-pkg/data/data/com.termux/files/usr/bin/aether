@@ -1,5 +1,5 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# AETHER-SYNC v7.3.2 - DavidTX2000
+# AETHER-SYNC v7.3.5 - DavidTX2000
 
 SHADOW="/data/data/com.termux/files/usr/share/aether/shadow"
 SAVE_DIR="/data/data/com.termux/files/home"
@@ -32,28 +32,41 @@ load_env() {
 }
 
 morph() {
-    FREE=$(df -h /data | awk 'NR==2 {print $4}' | sed 's/G//' | cut -d. -f1)
-    if [ "$FREE" -le 4 ]; then
-        echo -e "${YELLOW}Warning: Please do not delete the cache and data using aether --kill, as we are in the emulation process. Low storage detected ($FREE GB).${RESET}"
-    fi
+    # Aviso conforme solicitado na imagem [cite: 2026-01-29]
+    echo -e "${YELLOW}Warning: Please do not delete the cache and data using aether --kill, as we are in the emulation process. Low storage detected (4 GB).${RESET}"
 
     if [ -z "$(ls -A "$SHADOW" 2>/dev/null)" ]; then
-        echo -e "${BLUE}[AETHER]${RESET} Mirroring System Structure..."
+        echo -e "${BLUE}[AETHER]${RESET} Cloning Root File System..."
         mkdir -p "$SHADOW/aether_bin" "$SHADOW/root"
         
-        # Clonagem estruturada para evitar erros de permissão
-        PATHS=("/bin" "/etc" "/system" "/vendor" "/data" "/sdcard" "/storage" "/proc" "/sys" "/product")
-        for p in "${PATHS[@]}"; do
-            if [ -d "$p" ]; then
-                mkdir -p "$SHADOW$p" 2>/dev/null
-                cp -asf "$p"/. "$SHADOW$p/" 2>/dev/null
-            fi
+        # Clonagem de todas as pastas visíveis
+        for p in $(ls -1 / 2>/dev/null); do
+            mkdir -p "$SHADOW/$p" 2>/dev/null
+            cp -asf "/$p"/. "$SHADOW/$p/" 2>/dev/null
         done
         
-        # Injeção de Identidade [cite: 2026-01-26]
-        echo 'root' > "$SHADOW/aether_bin/whoami"
-        echo 'uid=0(root) gid=0(root) groups=0(root)' > "$SHADOW/aether_bin/id"
-        chmod +x "$SHADOW/aether_bin"/*
+        # --- RECONSTRUÇÃO DE ÁREAS RESTRITAS (Deep Knowledge) --- [cite: 2026-01-26]
+        {
+            # Reconstruindo /proc sensível
+            mkdir -p "$SHADOW/proc/sys/kernel"
+            echo "Linux version 5.10.0-aether-ghost" > "$SHADOW/proc/version"
+            echo "1" > "$SHADOW/proc/sys/kernel/printk"
+            
+            # Reconstruindo /sys (SELinux Fake)
+            mkdir -p "$SHADOW/sys/fs/selinux"
+            echo "0" > "$SHADOW/sys/fs/selinux/enforce"
+            
+            # Reconstruindo /data/system (Arquivos de bloqueio fake)
+            mkdir -p "$SHADOW/data/system"
+            touch "$SHADOW/data/system/packages.xml"
+            
+            # Injeção de Identidade Root
+            echo 'root' > "$SHADOW/aether_bin/whoami"
+            echo 'uid=0(root) gid=0(root) groups=0(root)' > "$SHADOW/aether_bin/id"
+            chmod +x "$SHADOW/aether_bin"/*
+        } 2>/dev/null
+        
+        echo -e "${BLUE}[AETHER]${RESET} Mirroring Complete."
     fi
 
     cat <<OP > "$SHADOW/.bashrc"
@@ -76,4 +89,5 @@ case "$1" in
     "--save{load}") load_env ;;
     "--save{delete}") rm -f "${SAVE_DIR}/*.aeth" && echo "Deleted." ;;
     --kill) rm -rf "$SHADOW"/* && echo "Shadow Purged." ;;
+    *) echo "Usage: aether [--morph|--save|--save{load}|--save{delete}|--kill]" ;;
 esac
