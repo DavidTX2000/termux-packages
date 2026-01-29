@@ -1,11 +1,12 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# AETHER-SYNC v6.2.0 - DavidTX2000
+# AETHER-SYNC v6.3.0 - DavidTX2000
 
 SHADOW="/data/data/com.termux/files/usr/share/aether/shadow"
 BLUE="\033[1;34m"
 CYAN="\033[1;36m"
 YELLOW="\033[1;33m"
 GREEN="\033[1;32m"
+RED="\033[1;31m"
 RESET="\033[0m"
 
 get_free_space() {
@@ -19,12 +20,20 @@ phantom_write() {
     touch "$target" 2>/dev/null
 }
 
+sysinfo() {
+    echo -e "${BLUE}--- AETHER SYSTEM REPORT ---${RESET}"
+    echo -e "${CYAN}Kernel:${RESET} $(uname -r)"
+    echo -e "${CYAN}Device:${RESET} $(getprop ro.product.model)"
+    echo -e "${CYAN}Android Ver:${RESET} $(getprop ro.build.version.release)"
+    echo -e "${CYAN}Storage Free:${RESET} $(get_free_space) GB"
+    echo -e "${CYAN}Shadow Status:${RESET} $([ -d "$SHADOW/system" ] && echo -e "${GREEN}Active${RESET}" || echo -e "${RED}Inactive${RESET}")"
+}
+
 morph() {
     FREE=$(get_free_space)
     MODE="link"
 
     if [ "$FREE" -le 4 ]; then
-        # Sua nova mensagem personalizada
         echo -e "${YELLOW}Warning: Please do not delete the cache and data using aether --kill, as we are in the emulation process. Low storage detected ($FREE GB).${RESET}"
     else
         echo -e "${CYAN}Attention: Do you want to perform a full emulation? [Y]yes, [N]no:${RESET} "
@@ -39,18 +48,12 @@ morph() {
     for p in "${ROOT_PATHS[@]}"; do
         if [ -d "$p" ]; then
             mkdir -p "$SHADOW$p"
-            if [ "$MODE" == "full" ]; then
-                cp -af "$p"/. "$SHADOW$p/" 2>/dev/null
-            else
-                cp -as "$p"/. "$SHADOW$p/" 2>/dev/null
-            fi
+            [ "$MODE" == "full" ] && cp -af "$p"/. "$SHADOW$p/" 2>/dev/null || cp -as "$p"/. "$SHADOW$p/" 2>/dev/null
         fi
     done
 
-    # Re-aplicando o Bypass de Escrita
     phantom_write "/product/build.prop"
     phantom_write "/proc/cpuinfo"
-    phantom_write "/data/data/com.whatsapp/databases/msgstore.db"
 
     cat <<OP > "$SHADOW/.bashrc"
 shopt -s nullglob
@@ -62,13 +65,20 @@ unset TERMUX_VERSION
 export PREFIX="/system"
 echo -e "${GREEN}Aether-Sync Global Environment Active.${RESET}"
 OP
-
     cd "$SHADOW"
     exec bash --rcfile "$SHADOW/.bashrc" -i
 }
 
 case "$1" in
     --morph) morph ;;
+    --sysinfo) sysinfo ;;
+    --explore) 
+        echo -e "${CYAN}Common Phantom Paths:${RESET}"
+        echo -e "1) /data/data (Apps)\n2) /product (Build Props)\n3) /proc (System Info)"
+        ;;
+    --check-storage)
+        echo -e "${YELLOW}Current Free Space: $(get_free_space) GB${RESET}"
+        ;;
     --kill) rm -rf "$SHADOW"/* && echo "Shadow data wiped." ;;
-    *) echo "Usage: aether [--morph|--kill]" ;;
+    *) echo "Usage: aether [--morph|--sysinfo|--explore|--check-storage|--kill]" ;;
 esac
