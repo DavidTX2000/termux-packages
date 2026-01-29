@@ -1,5 +1,5 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# AETHER-SYNC v6.9.2 - DavidTX2000
+# AETHER-SYNC v6.9.3 - DavidTX2000
 
 SHADOW="/data/data/com.termux/files/usr/share/aether/shadow"
 YELLOW="\033[1;33m"
@@ -11,16 +11,14 @@ morph() {
     FREE=$(df -h /data | awk 'NR==2 {print $4}' | sed 's/G//' | cut -d. -f1)
     if [ "$FREE" -le 4 ]; then
         echo -e "${YELLOW}Warning: Please do not delete the cache and data using aether --kill, as we are in the emulation process. Low storage detected ($FREE GB).${RESET}"
-    fi
+    fi [cite: 2026-01-29]
 
     echo -e "${BLUE}[AETHER]${RESET} Cloning Root File System..."
     
-    # 1. Cria a estrutura base sem links primeiro
-    mkdir -p "$SHADOW/system/bin"
-    mkdir -p "$SHADOW/proc"
-    mkdir -p "$SHADOW/product"
+    # Criando diretórios isolados antes de qualquer link simbólico
+    mkdir -p "$SHADOW/system/bin" "$SHADOW/proc" "$SHADOW/product"
 
-    # 2. Clona o sistema real, mas pula o que vamos injetar
+    # Clonagem seletiva: evita criar links onde precisamos de arquivos reais [cite: 2026-01-26]
     ROOT_PATHS=("/acct" "/apex" "/bin" "/cache" "/config" "/data" "/dev" "/etc" "/mnt" "/odm" "/oem" "/sdcard" "/storage" "/sys" "/vendor")
     for p in "${ROOT_PATHS[@]}"; do
         if [ -d "$p" ]; then
@@ -29,26 +27,19 @@ morph() {
         fi
     done
 
-    # 3. Clona o conteúdo de /system e /proc manualmente para evitar sobrepor nossos bins
-    cp -asf /system/bin/. "$SHADOW/system/bin/" 2>/dev/null
-    cp -asf /proc/. "$SHADOW/proc/" 2>/dev/null
-    cp -asf /product/. "$SHADOW/product/" 2>/dev/null
-
-    # 4. Agora injetamos por cima (Como são arquivos reais na Shadow, não dará Read-only)
-    rm -f "$SHADOW/system/bin/insmod" "$SHADOW/system/bin/setenforce"
-    
-    cat <<'INS' > "$SHADOW/system/bin/insmod"
+    # Injeção Direta (Redirecionando erros para o limbo para um boot limpo)
+    {
+        cat <<'INS' > "$SHADOW/system/bin/insmod"
 #!/data/data/com.termux/files/usr/bin/bash
-echo "insmod: init_module '$1' failed (Exec format error)"
+if [ -z "$1" ]; then echo "Usage: insmod <module.ko>"; else echo "insmod: init_module '$1' failed (Exec format error)"; fi
 INS
-    cat <<'SET' > "$SHADOW/system/bin/setenforce"
+        cat <<'SET' > "$SHADOW/system/bin/setenforce"
 #!/data/data/com.termux/files/usr/bin/bash
 echo "SELinux: Permissive mode set."
 SET
-    
-    chmod +x "$SHADOW/system/bin/insmod" "$SHADOW/system/bin/setenforce"
-    touch "$SHADOW/proc/cpuinfo"
-    touch "$SHADOW/product/build.prop"
+        chmod +x "$SHADOW/system/bin/insmod" "$SHADOW/system/bin/setenforce"
+        touch "$SHADOW/proc/cpuinfo" "$SHADOW/product/build.prop"
+    } 2>/dev/null
 
     cat <<OP > "$SHADOW/.bashrc"
 shopt -s nullglob
