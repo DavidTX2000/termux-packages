@@ -1,45 +1,46 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# AETHER-SYNC ULTRA v4.9.0 - DavidTX2000
+# AETHER-SYNC v5.2.0 - Deep Mirror (DavidTX2000)
 
 SHADOW="/data/data/com.termux/files/usr/share/aether/shadow"
 BLUE="\033[1;34m"
+CYAN="\033[1;36m"
 RESET="\033[0m"
 
-systems_status() {
-    echo -e "${BLUE}[AETHER SYSTEM REPORT]${RESET}"
-    echo -e "-------------------------------"
-    [ "$(id -u)" -eq 0 ] && REAL="${RED}Rooted${RESET}" || REAL="${GREEN}Non-Root${RESET}"
-    echo -e "Official System: $REAL"
-    [[ "$PWD" == *"$SHADOW"* ]] && EMUL="${CYAN}Active${RESET}" || EMUL="${YELLOW}Inactive${RESET}"
-    echo -e "Aether-Sync: Emulated Root ($EMUL)"
-    echo -e "-------------------------------"
-}
-
 morph() {
-    # 1. Cria a estrutura base se não existir
-    mkdir -p "$SHADOW/storage" "$SHADOW/sdcard" "$SHADOW/system" "$SHADOW/etc"
+    echo -e "${BLUE}[AETHER]${RESET} Iniciando Clonagem Profunda..."
 
-    # 2. Vincula o armazenamento real (Crucial para o seu erro de permissão)
-    # Usamos ln -s para espelhar sem gastar seus 3GB
-    [ ! -L "$SHADOW/storage/emulated" ] && ln -s /storage/emulated "$SHADOW/storage/emulated" 2>/dev/null
-    [ ! -L "$SHADOW/sdcard" ] && ln -s /sdcard "$SHADOW/sdcard" 2>/dev/null
+    # Lista completa baseada nas suas screenshots
+    PATHS=("/acct" "/apex" "/bin" "/cache" "/config" "/data" "/dev" "/etc" "/mnt" "/odm" "/oem" "/proc" "/product" "/sdcard" "/storage" "/sys" "/system" "/system_ext" "/vendor")
 
-    # 3. Configura o .bashrc clássico
+    for p in "${PATHS[@]}"; do
+        if [ -d "$p" ]; then
+            echo -e "${CYAN}[CLONANDO]${RESET} $p..."
+            mkdir -p "$SHADOW$p"
+            # -as cria a árvore de pastas e links para os arquivos (economiza 3GB)
+            cp -as "$p"/. "$SHADOW$p/" 2>/dev/null
+        fi
+    done
+
+    # Configuração do ambiente enclausurado
     cat <<OP > "$SHADOW/.bashrc"
+shopt -s nullglob
 export PS1='~#aether\${PWD#$SHADOW}\$: '
-# Interceptor de CD inteligente
+# Interceptador que obriga o sistema a olhar para as pastas clonadas
 alias cd='_cd(){ if [[ "\$1" == /* ]]; then builtin cd "$SHADOW\$1" 2>/dev/null || builtin cd "\$1"; else builtin cd "\$1"; fi; }; _cd'
+alias ls='ls --color=auto -F'
 alias aether='/data/data/com.termux/files/usr/bin/aether'
+# Oculta rastros do Termux
+unset TERMUX_VERSION
+export PREFIX="/system"
 OP
 
-    echo -e "${BLUE}[AETHER]${RESET} Synchronizing Storage & System Links..."
     cd "$SHADOW"
     exec bash --rcfile "$SHADOW/.bashrc" -i
 }
 
 case "$1" in
     --morph) morph ;;
-    --systems) [[ "$2" == "-status" ]] && systems_status ;;
+    --systems) [[ "$2" == "-status" ]] && echo "Official: Non-Root | Aether: Emulated Root" ;;
     --kill) rm -rf "$SHADOW"/* && echo "Shadow Cleaned." ;;
     *) echo "Usage: aether [--morph|--systems -status|--kill]" ;;
 esac
