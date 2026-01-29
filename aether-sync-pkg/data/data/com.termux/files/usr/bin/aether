@@ -1,60 +1,33 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# AETHER-SYNC v5.8.0 - Breakout Edition (DavidTX2000)
+# AETHER-SYNC v5.9.0 - Clean Edition (DavidTX2000)
 
 SHADOW="/data/data/com.termux/files/usr/share/aether/shadow"
 BLUE="\033[1;34m"
-CYAN="\033[1;36m"
 GREEN="\033[1;32m"
 RESET="\033[0m"
 
-# Special function to force write access in restricted phantom paths
 safe_touch() {
     local target_file="$SHADOW$1"
     local dir_path=$(dirname "$target_file")
-    
-    # Se for um link, removemos o link para criar um diretório/arquivo real na Shadow
     [ -L "$dir_path" ] && rm -rf "$dir_path"
     mkdir -p "$dir_path"
-    
-    # Cria o arquivo fantasma real para permitir edição sem root
     touch "$target_file" 2>/dev/null
-}
-
-inject_phantom_structures() {
-    echo -e "${BLUE}[AETHER]${RESET} Breaking restrictions & Injecting Phantoms..."
-
-    # 1. /data/data - Full Write Access
-    local data_apps=("com.whatsapp" "com.android.vending" "com.google.android.gms" "com.termux")
-    for pkg in "${data_apps[@]}"; do
-        mkdir -p "$SHADOW/data/data/$pkg/"{databases,shared_prefs,files}
-        touch "$SHADOW/data/data/$pkg/databases/internal.db"
-    done
-
-    # 2. /proc & /dev - Simulation (Not linking to avoid Permission Denied)
-    safe_touch "/proc/cpuinfo"
-    safe_touch "/proc/meminfo"
-    safe_touch "/proc/stat"
-    safe_touch "/dev/ion"
-    safe_touch "/dev/binder"
-    
-    # 3. /product - Custom Build Props
-    safe_touch "/product/build.prop"
 }
 
 morph() {
     echo -e "${BLUE}[AETHER]${RESET} Cloning Root File System..."
     ROOT_PATHS=("/acct" "/apex" "/bin" "/cache" "/config" "/data" "/dev" "/etc" "/mnt" "/odm" "/oem" "/proc" "/product" "/sdcard" "/storage" "/sys" "/system" "/system_ext" "/vendor")
-
     for p in "${ROOT_PATHS[@]}"; do
         if [ -d "$p" ]; then
-            # Criamos a pasta base antes para evitar conflitos de link
             mkdir -p "$SHADOW$p"
-            # Linkamos apenas o conteúdo, permitindo sobrescrever pastas específicas depois
             cp -as "$p"/. "$SHADOW$p/" 2>/dev/null
         fi
     done
 
-    inject_phantom_structures
+    # Phantom Injection
+    safe_touch "/proc/cpuinfo"
+    safe_touch "/product/build.prop"
+    mkdir -p "$SHADOW/data/data/com.whatsapp/databases"
 
     cat <<OP > "$SHADOW/.bashrc"
 shopt -s nullglob
@@ -62,48 +35,17 @@ export PS1='~#aether\${PWD#$SHADOW}\$: '
 alias cd='_cd(){ if [[ "\$1" == /* ]]; then builtin cd "$SHADOW\$1" 2>/dev/null || builtin cd "\$1"; else builtin cd "\$1"; fi; }; _cd'
 alias ls='ls --color=auto -F'
 alias aether='/data/data/com.termux/files/usr/bin/aether'
+alias dmeta='/data/data/com.termux/files/usr/bin/dmeta'
 unset TERMUX_VERSION
 export PREFIX="/system"
-echo -e "${GREEN}Aether-Sync Ultra Environment Ready.${RESET}"
+echo -e "${GREEN}Aether-Sync Environment Active.${RESET}"
 OP
-
-    echo -e "${BLUE}[AETHER]${RESET} Deep Mirror Complete. Storage Bypass Active."
     cd "$SHADOW"
     exec bash --rcfile "$SHADOW/.bashrc" -i
 }
 
-# Advanced dmeta tool for DavidTX2000 [cite: 2026-01-26]
-dmeta_tool() {
-    echo -e "${CYAN}[DMETA GENERATOR]${RESET}"
-    read -p "Type (apk/game/mod): " dtype
-    read -p "Name: " dname
-    read -p "Version: " dver
-    read -p "File size: " dsize
-    
-    local dbin="null"
-    if [ "$dtype" != "mod" ]; then
-        # Generating 32-bit random binary code [cite: 2026-01-26]
-        dbin=$(head /dev/urandom | tr -dc '01' | head -c 32)
-    fi
-
-    local target="$PWD/$dname.dmeta"
-    
-    cat <<MET > "$target"
-<dmeta-info>
- name="$dname"
- version="$dver"
- type="$dtype"
- size="$dsize"
- date="$(date +%Y-%m-%d)"
- <validate-id="$dbin">
-</dmeta-info>
-MET
-    echo -e "${GREEN}Dmeta file generated at: $target${RESET}"
-}
-
 case "$1" in
     --morph) morph ;;
-    --dmeta) dmeta_tool ;;
-    --kill) rm -rf "$SHADOW"/* && echo "Shadow Purged." ;;
-    *) echo "Usage: aether [--morph|--dmeta|--kill]" ;;
+    --kill) rm -rf "$SHADOW"/* ;;
+    *) echo "Usage: aether [--morph|--kill]" ;;
 esac
