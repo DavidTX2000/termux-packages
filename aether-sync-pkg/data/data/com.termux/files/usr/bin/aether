@@ -1,51 +1,70 @@
-#!/data/data/com.termux/files/usr/bin/sh
-# AETHER-SYNC ULTRA v4.0.0 - DavidTX2000
+#!/data/data/com.termux/files/usr/bin/bash
+# AETHER-SYNC ULTRA v4.8.0 - DavidTX2000
 
 SHADOW="/data/data/com.termux/files/usr/share/aether/shadow"
+# Cores do sistema
 BLUE="\033[1;34m"
+RED="\033[1;31m"
+GREEN="\033[1;32m"
 CYAN="\033[1;36m"
+YELLOW="\033[1;33m"
 RESET="\033[0m"
 
-stats() {
-    [ ! -d "$SHADOW" ] && echo "Shadow não iniciada." && return
-    SIZE=$(du -sh "$SHADOW" | awk '{print $1}')
-    FILES=$(find "$SHADOW" | wc -l)
-    echo "${BLUE}[AETHER]${RESET} ${CYAN}Stats:${RESET} Size: $SIZE | Files: $FILES"
+systems_status() {
+    echo -e "${BLUE}[AETHER SYSTEM REPORT]${RESET}"
+    echo -e "-------------------------------"
+    
+    # 1. Status do Sistema Real
+    if [ "$(id -u)" -eq 0 ]; then
+        echo -e "Official System: ${RED}Rooted (Real)${RESET}"
+    else
+        echo -e "Official System: ${GREEN}Normal (Non-Root)${RESET}"
+    fi
+
+    # 2. Status do Ambiente Aether
+    if [[ "$PREFIX" == *"/aether/"* ]] || [[ "$PWD" == *"$SHADOW"* ]]; then
+        echo -e "Aether-Sync: ${CYAN}Emulated Root (Active)${RESET}"
+    else
+        echo -e "Aether-Sync: ${YELLOW}Inactive (Standby)${RESET}"
+    fi
+    echo -e "-------------------------------"
 }
 
 morph() {
-    mkdir -p "$SHADOW/storage" "$SHADOW/sdcard" "$SHADOW/system" "$SHADOW/etc"
-    
-    # Mirroring (Sem copiar, apenas linkando para ser instantâneo e economizar seus 3GB)
-    echo "${BLUE}[AETHER]${RESET} Interceptando partições..."
-    ln -sf /sdcard/* "$SHADOW/sdcard/" 2>/dev/null
-    ln -sf /storage/* "$SHADOW/storage/" 2>/dev/null
-    
-    # Criando o Ambiente Enclausurado (The Cage)
-    # Aqui forçamos o Shell a reescrever o comportamento dos comandos
+    mkdir -p "$SHADOW"
+    # Criando o .bashrc com o visual Clássico que você pediu
     cat <<OP > "$SHADOW/.bashrc"
-export PATH="$SHADOW/system/bin:$PATH"
-alias ls='ls --color=auto'
-alias cp='cp -iv'
-# O TRUQUE: Redireciona qualquer comando que aponte para pastas raiz
-alias cd='_cd(){ case "\$1" in /*) builtin cd "$SHADOW\$1" ;; *) builtin cd "\$1" ;; esac; }; _cd'
-alias cp='_cp(){ arg1=\$1; arg2=\$2; [[ "\$arg1" == /* ]] && arg1="$SHADOW\$1"; [[ "\$arg2" == /* ]] && arg2="$SHADOW\$2"; /system/bin/cp "\$arg1" "\$arg2"; }; _cp'
-
-export PS1='${BLUE}AETHER${RESET}:${CYAN}\w${RESET}\$ '
-echo "Bem-vindo ao Ambiente Interceptado. Sem Root, Total Controle."
+# Prompt Clássico: ~#aether/caminho$:
+export PS1='~#aether\${PWD#$SHADOW}\$: '
+alias cd='_cd(){ [[ "\$1" == /* ]] && builtin cd "$SHADOW\$1" || builtin cd "\$1"; }; _cd'
+alias aether='/data/data/com.termux/files/usr/bin/aether'
 OP
-
-    # Entra no ambiente usando o bash do sistema mas com o nosso perfil enclausurado
-    sh --rcfile "$SHADOW/.bashrc" -i
-}
-
-purge() {
-    rm -rf "$SHADOW"/* && echo "Shadow destruída."
+    
+    echo -e "${BLUE}[AETHER]${RESET} Warning: Low storage detected (3 GB)..."
+    echo -e "${BLUE}[AETHER]${RESET} Using Virtual Link Mode..."
+    echo -e "${BLUE}[AETHER]${RESET} Entering Shadow Environment..."
+    
+    cd "$SHADOW"
+    exec bash --rcfile "$SHADOW/.bashrc" -i
 }
 
 case "$1" in
     --morph) morph ;;
-    --stats) stats ;;
-    --kill) purge ;;
-    *) echo "Usage: aether [--morph|--kill|--stats]" ;;
+    --systems)
+        if [ "$2" = "-status" ]; then 
+            systems_status 
+        else 
+            echo "Usage: aether --systems -status"
+        fi
+        ;;
+    --stats)
+        SIZE=$(du -sh "$SHADOW" 2>/dev/null | awk '{print $1}')
+        echo -e "${BLUE}[AETHER]${RESET} Size: ${SIZE:-0}"
+        ;;
+    --kill) 
+        rm -rf "$SHADOW"/* && echo "Shadow Environment Terminated." 
+        ;;
+    *) 
+        echo "Usage: aether [--morph|--systems -status|--stats|--kill]" 
+        ;;
 esac
