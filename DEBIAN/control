@@ -1,0 +1,8 @@
+Package: aether-sync
+Version: 2.1.0
+Section: admin
+Priority: optional
+Architecture: all
+Maintainer: DavidTX2000 <davidtx2000ofc@gmail.com>
+Description: AETHER-SYNC MASTER. Professional system virtualization.
+ Follows Termux packaging policies. Zero-dependency engineering.
