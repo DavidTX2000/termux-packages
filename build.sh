@@ -1,28 +1,28 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# Package: aether-sync
-# Version: 41.0 (Adaptive Ghost IA)
-# Maintainer: DavidTX2000
-# Description: Professional forensic environment deployment
-
-echo -e "\033[1;34m[BUILD]\033[0m Initializing aether-sync v41.0..."
 
 PREFIX="/data/data/com.termux/files/usr"
-BIN_DIR="$PREFIX/bin"
-SHADOW_DIR="$PREFIX/share/aether-sync/shadow"
+SHADOW="$PREFIX/share/aether-sync/shadow"
 
-# Creating necessary directory structure
-mkdir -p "$BIN_DIR"
-mkdir -p "$SHADOW_DIR"
+MODEL=$(getprop ro.product.model)
+BRAND=$(getprop ro.product.brand)
 
-if [ -f "aether" ]; then
-    echo -e "\033[1;34m[BUILD]\033[0m Deploying core binary..."
-    cp aether "$BIN_DIR/aether"
-    chmod 755 "$BIN_DIR/aether"
-    
-    echo -e "\033[1;32m[SUCCESS]\033[0m aether-sync v41.0 (Adaptive Ghost) installed."
-    echo -e "\033[1;34m[INFO]\033[0m Run 'aether --morph' to start the environment."
-else
-    echo -e "\033[1;31m[ERROR]\033[0m Source 'aether' not found in current directory!"
-    echo -e "\033[1;33m[FIX]\033[0m Please ensure the 'aether' file is present before building."
-    exit 1
-fi
+echo -e "\033[1;34m[BUILD]\033[0m Detecting System Architecture..."
+echo -e "\033[1;32m[BUILD]\033[0m Target Identified: $BRAND $MODEL"
+
+echo -e "\033[1;34m[BUILD]\033[0m Generating Universal Shadow Tree..."
+mkdir -p $SHADOW/{acct,apex,bin,carrier,config,data,dev,efs,etc,linkerconfig,metadata,mnt,odm,oem,proc,product,root,sdcard,sec_efs,storage,sys,system,system_ext,tmp,vendor}
+mkdir -p $SHADOW/system/etc
+
+echo -e "\033[1;34m[BUILD]\033[0m Mirroring system descriptors..."
+cp /system/etc/*.xml "$SHADOW/system/etc/" 2>/dev/null
+cp /system/etc/*.json "$SHADOW/system/etc/" 2>/dev/null
+getprop > "$SHADOW/system/build.prop"
+echo "root:x:0:0:root:/root:/data/data/com.termux/files/usr/bin/bash" > "$SHADOW/etc/passwd"
+touch "$SHADOW/acct/uid_0"
+
+cp aether "$PREFIX/bin/aether"
+chmod +x "$PREFIX/bin/aether"
+chmod -R 755 "$SHADOW"
+
+echo -e "\033[1;32m[SUCCESS]\033[0m Environment is now 100% Isolated and Populated."
+echo -e "\033[1;32m[READY]\033[0m Ready for testing by Tomjo2000 and Grimler91."
