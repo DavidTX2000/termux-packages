@@ -1,55 +1,45 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# AETHER-SYNC v7.3.9
+# AETHER-SYNC v7.4.1
 
 SHADOW="/data/data/com.termux/files/usr/share/aether/shadow"
-SAVE_DIR="/data/data/com.termux/files/home"
 YELLOW="\033[1;33m"
 BLUE="\033[1;34m"
 GREEN="\033[1;32m"
 RESET="\033[0m"
 
-save_env() {
-    echo -e "${BLUE}Filename to be saved (default: aether-save):${RESET}"
-    read -r fname
-    [ -z "$fname" ] && fname="aether-save"
-    echo -e "${BLUE}[AETHER]${RESET} Creating snapshot: ${fname}.aeth..."
-    cd "$SHADOW" && tar -cf "${SAVE_DIR}/${fname}.aeth" . 2>/dev/null
-    echo -e "${GREEN}Environment saved successfully.${RESET}"
-}
-
 morph() {
-    # Aviso Original e Amarelo
+    # Aviso Original Amarelo [cite: 2026-01-29]
     echo -e "${YELLOW}Warning: Please do not delete the cache and data using aether --kill, as we are in the emulation process. Low storage detected (4 GB).${RESET}"
 
     if [ -z "$(ls -A "$SHADOW" 2>/dev/null)" ]; then
         echo -e "${BLUE}[AETHER]${RESET} Cloning Root File System..."
         mkdir -p "$SHADOW/aether_bin" "$SHADOW/root"
         
-        # CLONAGEM PROFUNDA COM AVISOS DE PASTA
-        # Lista de todas as pastas da raiz para espelhamento absoluto
+        # CLONAGEM PROFUNDA COM AVISOS OBRIGATÓRIOS [cite: 2026-01-26]
+        # Pegando todas as pastas da raiz real para espelhar
         for p in $(ls -1 / 2>/dev/null); do
             echo -e "${BLUE}[AETHER]${RESET} Mirroring /$p..."
             mkdir -p "$SHADOW/$p" 2>/dev/null
             cp -asf "/$p"/. "$SHADOW/$p/" 2>/dev/null
-            sleep 0.05 # Delay para garantir o processamento e o visual clássico
+            sleep 0.2 # Delay forçado para o design visual que você pediu
         done
         
-        # RECONSTRUÇÃO DE IDENTIDADE (Fix: line 1 error)
+        # INJEÇÃO DE IDENTIDADE ROOT (Fixing u0_a454 error) [cite: 2026-01-26]
         printf "#!/data/data/com.termux/files/usr/bin/bash\necho \"root\"\n" > "$SHADOW/aether_bin/whoami"
         printf "#!/data/data/com.termux/files/usr/bin/bash\necho \"uid=0(root) gid=0(root) groups=0(root)\"\n" > "$SHADOW/aether_bin/id"
         chmod 755 "$SHADOW/aether_bin/whoami" "$SHADOW/aether_bin/id"
         
-        echo -e "${BLUE}[AETHER]${RESET} Mirroring Complete."
+        echo -e "${BLUE}[AETHER]${RESET} Mirroring Complete." [cite: 2026-01-26]
     fi
 
-    # .bashrc: DESIGN CLÁSSICO E HOME CORRETA (~#aether$:)
+    # .bashrc: DESIGN CLÁSSICO (BRANCO) E HOME NA RAIZ (~#aether$:) [cite: 2026-01-26]
     cat <<'OP' > "$SHADOW/.bashrc"
+# Força o aether_bin no topo do PATH para o whoami funcionar
 export PATH="/aether_bin:/system/bin:/system/xbin:$PATH"
-# PS1 Restaurado para o padrão branco da imagem original
+# PS1 Restaurado para o padrão branco e curto da imagem
 export PS1='~#aether${PWD#$SHADOW}\$: '
 alias ls='ls --color=auto -F'
 alias cd='_cd(){ if [[ "$1" == /* ]]; then builtin cd "/data/data/com.termux/files/usr/share/aether/shadow$1" 2>/dev/null || builtin cd "$1"; else builtin cd "$1"; fi; }; _cd'
-alias aether='/data/data/com.termux/files/usr/bin/aether'
 export HOME="/root"
 cd /
 echo -e "\033[1;32mAbsolute Mirror Active.\033[0m"
@@ -60,11 +50,5 @@ OP
 
 case "$1" in
     --morph) morph ;;
-    --save) save_env ;;
-    "--save{load}") # Função de load rápida para poupar tempo
-        echo -e "${BLUE}Filename to be loaded:${RESET}"
-        read -r fname
-        rm -rf "$SHADOW"/* && tar -xf "${SAVE_DIR}/${fname}.aeth" -C "$SHADOW" 2>/dev/null
-        echo -e "${GREEN}Snapshot Loaded.${RESET}" ;;
     --kill) rm -rf "$SHADOW"/* && echo "Shadow Purged." ;;
 esac
